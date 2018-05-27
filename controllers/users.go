@@ -1,8 +1,10 @@
 package controllers
 
 import (
+  "fmt"
   "github.com/jlindauer/usegolang/views"
   "net/http"
+  //"github.com/gorilla/schema"
 )
 
 func NewUsers() *Users {
@@ -17,6 +19,21 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
   }
 }
 
+func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
+  var form SignupForm
+  if err := parseForm(r, &form); err != nil {
+    panic(err)
+  }
+
+  fmt.Fprintln(w, "Email is", form.Email)
+  fmt.Fprintln(w, "Password is", form.Password)
+}
+
 type Users struct {
   NewView *views.View
+}
+
+type SignupForm struct {
+  Email    string `schema:"email"`
+  Password string `schema:"password"`
 }

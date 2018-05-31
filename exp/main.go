@@ -31,4 +31,6 @@ func main() {
 	}
 
 	defer db.Close()
+
+	db.AutoMigrate(&User{})
 }

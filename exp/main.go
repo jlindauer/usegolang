@@ -34,9 +34,23 @@ func main() {
 		panic(err)
 	}
 
+	user.Name = "Update Name"
+	if err := us.Update(&user); err != nil {
+		panic(err)
+	}
+
 	foundUser, err := us.ByEmail("michael@dundermifflin.com")
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(foundUser)
+
+	if err := us.Delete(foundUser.ID); err != nil {
+		panic(err)
+	}
+
+	_, err = us.ByID(foundUser.ID)
+	if err != models.ErrNotFound {
+		panic("user was not deleted!")
+	}
 }

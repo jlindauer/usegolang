@@ -39,6 +39,12 @@ func (us *UserService) Close() error {
   return us.db.Close()
 }
 
+// Create will create the provided user and backfill data like the ID,
+// CreatedAt, and UpdatedAt fields.
+func (us *UserService) Create(user *User) error {
+  return us.db.Create(user).Error
+}
+
 // ByID will look up a user with the provided ID.
 // If the user is found, we will return a nil error
 // If the user is not found, we will return ErrNotFound

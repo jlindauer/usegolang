@@ -1,1 +1,1 @@
-UseGolangg
+UseGolang

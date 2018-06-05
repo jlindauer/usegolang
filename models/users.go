@@ -26,7 +26,7 @@ type UserService struct {
 }
 
 // NewUserService opens the connection to the Users table and returns a
-// UserService struct with the open gorm db
+// pointer to a UserService struct with the open gorm db
 func NewUserService(connectionInfo string) (*UserService, error) {
   db, err := gorm.Open("postgres", connectionInfo)
   if err != nil {
@@ -107,12 +107,12 @@ func (us *UserService) Delete(id uint) error {
 }
 
 // DestructiveReset drops the user table and rebuilds it
-func (us *UserService) DestructiveReset() {
-  err := us.db.DropTableIfExists(&User{})
+func (us *UserService) DestructiveReset() error {
+  err := us.db.DropTableIfExists(&User{}).Error
   if err != nil {
     return err
   }
-  return us.db.AutoMigrate()
+  return us.AutoMigrate()
 }
 
 // AutoMigrate will attempt to automatically migrate the users table

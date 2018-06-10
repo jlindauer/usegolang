@@ -5,9 +5,27 @@ import (
 	"net/http"
 
 	"github.com/jlindauer/usegolang/models"
+	"github.com/jlindauer/usegolang/rand"
 	"github.com/jlindauer/usegolang/views"
 	//"github.com/gorilla/schema"
 )
+
+type Users struct {
+	NewView   *views.View
+	LoginView *views.View
+	us        *models.UserService
+}
+
+type SignupForm struct {
+	Name     string `schema:"name"`
+	Email    string `schema:"email"`
+	Password string `schema:"password"`
+}
+
+type LoginForm struct {
+	Email    string `schema:"email"`
+	Password string `schema:"password"`
+}
 
 // NewUsers returns a User after creating a View
 func NewUsers(us *models.UserService) *Users {
@@ -43,24 +61,16 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintln(w, "User is", user)
-}
 
-type Users struct {
-	NewView   *views.View
-	LoginView *views.View
-	us        *models.UserService
-}
+	err := u.signIn(w, &user)
+	if err != nil {
+		// Temporarily render the error message for debugging
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-type SignupForm struct {
-	Name     string `schema:"name"`
-	Email    string `schema:"email"`
-	Password string `schema:"password"`
-}
-
-type LoginForm struct {
-	Email    string `schema:"email"`
-	Password string `schema:"password"`
+	// Redirect to the cookie test page to test the cookie
+	http.Redirect(w, r, "/cookietest", http.StatusFound)
 }
 
 // Login is used to process the login form when a user tries to
@@ -86,20 +96,52 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	cookie := http.Cookie{
-		Name:  "email",
-		Value: user.Email,
-	}
-	http.SetCookie(w, &cookie)
-	fmt.Fprintln(w, user)
-}
 
-// CookieTest checks if the current user has a cookie set
-func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("email")
+	err = u.signIn(w, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintln(w, "Email is:", cookie.Value)
+
+	// Redirect to the cookie test page to test the cookie
+	http.Redirect(w, r, "/cookietest", http.StatusFound)
+}
+
+// signIn is used to sign the given user in via cookies
+func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
+	if user.Remember == "" {
+		token, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = token
+		err = u.us.Update(user)
+		if err != nil {
+			return err
+		}
+	}
+
+	cookie := http.Cookie{
+		Name:  "remember_token",
+		Value: user.Remember,
+	}
+	http.SetCookie(w, &cookie)
+
+	return nil
+}
+
+// CookieTest checks if the current user has a cookie set
+func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("remember_token")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	user, err := u.us.ByRemember(cookie.Value)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintln(w, user)
 }

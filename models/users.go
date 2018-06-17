@@ -40,6 +40,17 @@ type UserDB interface {
 	DestructiveReset() error
 }
 
+// UserService is a set of methods used to manipulate and work with the user model
+type UserService interface {
+	// Authentica will verify the provided email address and password are
+	// correct. If they are correct the user corresponding to that email will be
+	// returned.
+	// Otherwise you will receive either: ErrNotFound, ErrInvalidPassword, or
+	// another error if something goes wrong.
+	Authenticate(email, password string) (*User, error)
+	UserDB
+}
+
 // userGorm represents our database interaction layer
 // and implements the UserDB interface fully.
 type userGorm struct {
@@ -57,7 +68,7 @@ type User struct {
 	RememberHash string `gorm:"not null;unique_index"`
 }
 
-type UserService struct {
+type userService struct {
 	UserDB
 }
 
@@ -72,6 +83,7 @@ const hmacSecretKey = "secret-hmac-key"
 var userPwPepper = "secret-random-string"
 
 var _ UserDB = &userGorm{}
+var _ UserService = &userService{}
 
 var (
 	// ErrNotFound is returned when a resource cannot be found in teh database
@@ -88,14 +100,14 @@ var (
 
 // NewUserService opens the connection to the Users table and returns a
 // pointer to a UserService struct with the open gorm db
-func NewUserService(connectionInfo string) (*UserService, error) {
+func NewUserService(connectionInfo string) (UserService, error) {
 	ug, err := newUserGorm(connectionInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	return &UserService{
-		UserDB: userValidator{
+	return &userService{
+		UserDB: &userValidator{
 			UserDB: ug,
 		},
 	}, nil
@@ -124,7 +136,7 @@ func newUserGorm(connectionInfo string) (*userGorm, error) {
 //   user, nil.
 // Otherwise if another error is encountered this will return
 //   nil, error
-func (us *UserService) Authenticate(email, password string) (*User, error) {
+func (us *userService) Authenticate(email, password string) (*User, error) {
 	foundUser, err := us.ByEmail(email)
 	if err != nil {
 		return nil, err

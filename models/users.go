@@ -76,6 +76,7 @@ type userService struct {
 // data before passing it on to the next UserDB in our interface chain.
 type userValidator struct {
 	UserDB
+	hmac hash.HMAC
 }
 
 const hmacSecretKey = "secret-hmac-key"
@@ -106,10 +107,13 @@ func NewUserService(connectionInfo string) (UserService, error) {
 		return nil, err
 	}
 
+	hmac := hash.NewHMAC(hmacSecretKey)
+	uv := &userValidator{
+		hmac:   hmac,
+		UserDB: ug,
+	}
 	return &userService{
-		UserDB: &userValidator{
-			UserDB: ug,
-		},
+		UserDB: uv,
 	}, nil
 }
 
@@ -232,6 +236,13 @@ func (ug *userGorm) ByRemember(token string) (*User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// ByRemember will hash the remember token and then call ByRemember
+// on the subsequent UserDB layer.
+func (uv *userValidator) ByRemember(token string) (*User, error) {
+	rememberHash := uv.hmac.Hash(token)
+	return uv.UserDB.ByRemember(rememberHash)
 }
 
 // Update will update the provided user with all of the data

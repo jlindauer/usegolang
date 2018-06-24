@@ -226,6 +226,15 @@ func (uv *userValidator) setRememberIfUnset(user *User) error {
 	return nil
 }
 
+func (uv *userValidator) idGreaterThan(n uint) userValFn {
+	return userValFn(func(user *User) error {
+		if user.ID <= n {
+			return ErrInvalidID
+		}
+		return nil
+	})
+}
+
 // first will query using the provided gorm.DB and it will get the first item
 // returned and place it into the dst. If nothing is found
 // in the query it will return ErrNotFound
@@ -312,8 +321,11 @@ func (ug *userGorm) Update(user *User) error {
 
 // Delete will delete the user with the provided ID
 func (uv *userValidator) Delete(id uint) error {
-	if id == 0 {
-		return ErrInvalidID
+	var user User
+	user.ID = id
+	err := runUserValFns(&user, uv.idGreaterThan(0))
+	if err != nil {
+		return err
 	}
 	return uv.UserDB.Delete(id)
 }

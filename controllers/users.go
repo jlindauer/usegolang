@@ -39,7 +39,17 @@ func NewUsers(us models.UserService) *Users {
 // New is used to render the form where a user can create a new user account
 // GET /signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	if err := u.NewView.Render(w, nil); err != nil {
+	type Alert struct {
+		Level   string
+		Message string
+	}
+
+	alert := Alert{
+		Level:   "success",
+		Message: "Successfully rendered a dynamic alert!",
+	}
+
+	if err := u.NewView.Render(w, alert); err != nil {
 		panic(err)
 	}
 }

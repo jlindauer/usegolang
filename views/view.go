@@ -4,6 +4,8 @@ import (
 	"html/template"
 	"net/http"
 	"path/filepath"
+	"bytes"
+	"io"
 )
 
 var (
@@ -14,7 +16,7 @@ var (
 
 // Render takes in a ResponseWriter and data, and then executes the template associated
 // with the View v, and writes the output to the ResponseWriter
-func (v *View) Render(w http.ResponseWriter, data interface{}) error {
+func (v *View) Render(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "text/html")
 	switch data.(type) {
 	case Data:
@@ -24,15 +26,21 @@ func (v *View) Render(w http.ResponseWriter, data interface{}) error {
 			Yield: data,
 		}
 	}
-	return v.Template.ExecuteTemplate(w, v.Layout, data)
+	var buf bytes.Buffer
+	err := v.Template.ExecuteTemplate(&buf, v.Layout, data)
+	if err != nil {
+		http.Error(w, "Something went wrong. If the problem " +
+			"persists, please email support@usegolang.com",
+			http.StatusInternalServerError)
+		return
+	}
+	io.Copy(w, &buf)
 }
 
 // ServeHTTP fulfills the specifications of https://golang.org/pkg/net/http/#ServeMux.ServeHTTP
 // It is used to dispatch requests to the handler setup for the router pattern
 func (v *View) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := v.Render(w, nil); err != nil {
-		panic(err)
-	}
+	v.Render(w, nil)
 }
 
 // layoutFiles takes in the layout directory file path and Go's template extension and then

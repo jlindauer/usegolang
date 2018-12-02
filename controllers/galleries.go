@@ -5,6 +5,7 @@ import (
   "net/http"
   "github.com/jlindauer/usegolang/models"
   "github.com/jlindauer/usegolang/views"
+  "github.com/jlindauer/usegolang/context"
 )
 
 type Galleries struct {
@@ -32,8 +33,11 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
     g.New.Render(w, vd)
     return
   }
+  user := context.User(r.Context())
+
   gallery := models.Gallery{
-    Title: form.Title,
+    Title:  form.Title,
+    UserID: user.ID,
   }
   if err := g.gs.Create(&gallery); err != nil {
     vd.SetAlert(err)

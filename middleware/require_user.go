@@ -1,10 +1,10 @@
 package middleware
 
 import (
-  "fmt"
   "net/http"
 
   "github.com/jlindauer/usegolang/models"
+  "github.com/jlindauer/usegolang/context"
 )
 
 type RequireUser struct {
@@ -17,10 +17,6 @@ type RequireUser struct {
 // call next(w, r) if they are, or redirect them to the
 // login page if they are not
 func (mw *RequireUser) ApplyFn(next http.HandlerFunc) http.HandlerFunc {
-  // We want to return a dynamically created
-  // func(http.ResponseWriter, *http.Request)
-  // but we also need to convert it into an
-  // http.HandlerFunc
   return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
     cookie, err := r.Cookie("remember_token")
     if err != nil {
@@ -32,7 +28,15 @@ func (mw *RequireUser) ApplyFn(next http.HandlerFunc) http.HandlerFunc {
       http.Redirect(w, r, "login", http.StatusFound)
       return
     }
-    fmt.Println("User found: ", user)
+    // Get the context from our request
+    ctx := r.Context()
+    // Create a new context from the existing one that has
+    // our user stored in it with the private user key
+    ctx = context.WithUser(ctx, user)
+    // Create a new request from the existing one with our
+    // context attached to it and assign it back to `r`
+    r = r.WithContext(ctx)
+    // Call next(w, r) with our updated context
     next(w, r)
   })
 }

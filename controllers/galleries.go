@@ -70,14 +70,15 @@ func (g *Galleries) Show(w http.ResponseWriter, r *http.Request) {
     http.Error(w, "Invalid gallery ID", http.StatusNotFound)
     return
   }
-  // This line is only to prevent the compiler from compalining
-  // about us not using the id paramter. We will use it later.
-  _ = id
-  // Finally we need to lookup the gallery with the ID we have
-  // but we haven't written the code yet. For now we will create a
-  // temporary gallery to test our view.
-  gallery := models.Gallery{
-    Title: "A temporary fake gallery with ID: " + idStr,
+  gallery, err := g.gs.ByID(uint(id))
+  if err != nil {
+    switch err {
+    case models.ErrNotFound:
+      http.Error(w, "Gallery not found", http.StatusNotFound)
+    default:
+      http.Error(w, "Whoops! Something went wrong.", http.StatusInternalServerError)
+    }
+    return
   }
   // We will build the views.Data object and set our gallery
   // as the Yield field, but technically we do not need to

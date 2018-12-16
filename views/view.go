@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"bytes"
 	"io"
+	"github.com/jlindauer/usegolang/context"
 )
 
 var (
@@ -16,18 +17,20 @@ var (
 
 // Render takes in a ResponseWriter and data, and then executes the template associated
 // with the View v, and writes the output to the ResponseWriter
-func (v *View) Render(w http.ResponseWriter, data interface{}) {
+func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) {
 	w.Header().Set("Content-Type", "text/html")
-	switch data.(type) {
+	var vd Data
+	switch d := data.(type) {
 	case Data:
-		// Do nothing
+		vd = d
 	default:
-		data = Data{
+		vd = Data{
 			Yield: data,
 		}
 	}
+	vd.User = context.User(r.Context())
 	var buf bytes.Buffer
-	err := v.Template.ExecuteTemplate(&buf, v.Layout, data)
+	err := v.Template.ExecuteTemplate(&buf, v.Layout, vd)
 	if err != nil {
 		http.Error(w, "Something went wrong. If the problem " +
 			"persists, please email support@usegolang.com",
@@ -40,7 +43,7 @@ func (v *View) Render(w http.ResponseWriter, data interface{}) {
 // ServeHTTP fulfills the specifications of https://golang.org/pkg/net/http/#ServeMux.ServeHTTP
 // It is used to dispatch requests to the handler setup for the router pattern
 func (v *View) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	v.Render(w, nil)
+	v.Render(w, r, nil)
 }
 
 // layoutFiles takes in the layout directory file path and Go's template extension and then

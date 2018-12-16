@@ -13,10 +13,12 @@
       <a class="navbar-brand" href="/">UseGolang</a>
     </div>
     <div id="navbar" class="navbar-collapse collapse">
-      <ul class="nav navbar-nav navbar">
+      <ul class="nav navbar-nav">
         <li><a href="/">Home</a></li>
         <li><a href="/contact">Contact</a></li>
-        <li><a href="/faq">FAQ</a></li>
+        {{if .User}}
+          <li><a href="/galleries">Galleries</a></li>
+        {{end}}
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li><a href="/login">Log In</a></li>

@@ -1,6 +1,9 @@
 package views
 
-import "log"
+import (
+	"log"
+	"github.com/jlindauer/usegolang/models"
+)
 
 const (
 	AlertLvlError   = "danger"
@@ -17,6 +20,7 @@ const (
 // Data is the top level structure that views expect data to come in
 type Data struct {
 	Alert *Alert
+	User  *models.User
 	Yield interface{}
 }
 

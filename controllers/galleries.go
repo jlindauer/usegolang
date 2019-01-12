@@ -1,6 +1,7 @@
 package controllers
 
 import (
+  "fmt"
   "net/http"
   "strconv"
   "github.com/gorilla/mux"
@@ -123,6 +124,43 @@ func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
     Message: "Images successfully uploaded!",
   }
   g.EditView.Render(w, r, vd)
+}
+
+// POST /galleries/:id/images/:filename/delete
+func (g *Galleries) ImageDelete(w http.ResponseWriter, r *http.Request) {
+  gallery, err := g.galleryByID(w, r)
+  if err != nil {
+    return
+  }
+  user := context.User(r.Context())
+  if gallery.UserID != user.ID {
+    http.Error(w, "You do not have permission to edit this gallery or image", http.StatusForbidden)
+    return
+  }
+  // Get the filename from the url
+  filename := mux.Vars(r)["filename"]
+  // Build the Image model
+  i := models.Image{
+    Filename:  filename,
+    GalleryID: gallery.ID,
+  }
+  // Try to delete the image
+  err = g.is.Delete(&i)
+  if err != nil {
+    // Render the edit page with any errors
+    var vd views.Data
+    vd.Yield = gallery
+    vd.SetAlert(err)
+    g.EditView.Render(w, r, vd)
+    return
+  }
+  // If successful redirect to the edit gallery page
+  url, err := g.r.Get(EditGallery).URL("id", fmt.Sprintf("%v", gallery.ID))
+  if err != nil {
+    http.Redirect(w, r, "/galleries", http.StatusFound)
+    return
+  }
+  http.Redirect(w, r, url.Path, http.StatusFound)
 }
 
 // GET /galleries/:id

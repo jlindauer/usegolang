@@ -150,3 +150,20 @@ func (gv *galleryValidator) nonZeroID(gallery *Gallery) error {
   }
   return nil
 }
+
+func (g *Gallery) ImagesSplitN(n int) [][]string {
+  ret := make([][]string, n)
+  // Create the inner slices - we need N of them, and we will start
+  // each with a size of 0
+  for i := 0; i < n; i++ {
+    ret[i] = make([]string, 0)
+  }
+  // Iterate over the images using the index % n to determine
+  // which of the slices in ret to add the image to
+  for i, img := range g.Images {
+    // User the remainder operator to continually rotate through 0-2
+    bucket := i % n
+    ret[bucket] = append(ret[bucket], img)
+  }
+  return ret
+}

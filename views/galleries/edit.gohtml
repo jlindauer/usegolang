@@ -37,11 +37,9 @@
 {{define "galleryImages"}}
 <ul>
   {{range .Images}}
-    <li>
-      {{.}}
-    </li>
+    <img src="{{.}}">
   {{end}}
-</ul>  
+</ul>
 {{end}}
 
 {{define "editGalleryForm"}}

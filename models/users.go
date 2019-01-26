@@ -63,6 +63,7 @@ type User struct {
 
 type userService struct {
 	UserDB
+	pepper string
 }
 
 // userValidator is our validation layer that validates and normalizes
@@ -70,12 +71,9 @@ type userService struct {
 type userValidator struct {
 	UserDB
 	hmac       hash.HMAC
+	pepper		 string
 	emailRegex *regexp.Regexp
 }
-
-const hmacSecretKey = "secret-hmac-key"
-
-var userPwPepper = "secret-random-string"
 
 var _ UserDB = &userGorm{}
 var _ UserService = &userService{}
@@ -147,19 +145,21 @@ func runUserValFns(user *User, fns ...userValFn) error {
 
 // NewUserService opens the connection to the Users table and returns a
 // pointer to a UserService struct with the open gorm db
-func NewUserService(db *gorm.DB) UserService {
+func NewUserService(db *gorm.DB, pepper, hmacKey string) UserService {
 	ug := &userGorm{db}
-	hmac := hash.NewHMAC(hmacSecretKey)
-	uv := newUserValidator(ug, hmac)
+	hmac := hash.NewHMAC(hmacKey)
+	uv := newUserValidator(ug, hmac, pepper)
 	return &userService{
 		UserDB: uv,
+		pepper: pepper,
 	}
 }
 
-func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
+func newUserValidator(udb UserDB, hmac hash.HMAC, pepper string) *userValidator {
 	return &userValidator{
 		UserDB:     udb,
 		hmac:       hmac,
+		pepper:			pepper,
 		emailRegex: regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,16}$`),
 	}
 }
@@ -182,7 +182,7 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 
 	err = bcrypt.CompareHashAndPassword(
 		[]byte(foundUser.PasswordHash),
-		[]byte(password+userPwPepper))
+		[]byte(password+us.pepper))
 	switch err {
 	case nil:
 		return foundUser, nil
@@ -228,7 +228,7 @@ func (uv *userValidator) bcryptPassword(user *User) error {
 		return nil
 	}
 
-	pwBytes := []byte(user.Password + userPwPepper)
+	pwBytes := []byte(user.Password + uv.pepper)
 	hashedBytes, err := bcrypt.GenerateFromPassword(
 		pwBytes, bcrypt.DefaultCost)
 	if err != nil {

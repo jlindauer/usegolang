@@ -5,9 +5,11 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/csrf"
 	"github.com/jlindauer/usegolang/controllers"
 	"github.com/jlindauer/usegolang/models"
 	"github.com/jlindauer/usegolang/middleware"
+	"github.com/jlindauer/usegolang/rand"
 )
 
 const (
@@ -38,9 +40,18 @@ func main() {
 	usersC := controllers.NewUsers(services.User)
 	galleriesC := controllers.NewGalleries(services.Gallery, services.Image, r)
 
+	// Instantiate our own middleware
 	userMw := middleware.User{
 		UserService: services.User,
 	}
+
+	// Create the CSRF Protect middleware
+	isProd := false
+	b, err := rand.Bytes(32)
+	if err != nil {
+		panic(err)
+	}
+	csrfMw := csrf.Protect(b, csrf.Secure(isProd))
 
 	requireUserMw := middleware.RequireUser{}
 
@@ -77,5 +88,5 @@ func main() {
 	r.PathPrefix("/assets/").Handler(assetHandler)
 
 	fmt.Println("Starting the server on :3000...")
-	http.ListenAndServe(":3000", userMw.Apply(r))
+	http.ListenAndServe(":3000", csrfMw(userMw.Apply(r)))
 }

@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"bytes"
 	"io"
+	"errors"
 	"github.com/jlindauer/usegolang/context"
+	"github.com/gorilla/csrf"
 )
 
 var (
@@ -30,7 +32,17 @@ func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) 
 	}
 	vd.User = context.User(r.Context())
 	var buf bytes.Buffer
-	err := v.Template.ExecuteTemplate(&buf, v.Layout, vd)
+
+	// Create csrfField using current HTTP request
+	csrfField := csrf.TemplateField(r)
+	tpl := v.Template.Funcs(template.FuncMap{
+		// Change return type since not returning an error here
+		"csrfField": func() template.HTML {
+			return csrfField
+		},
+	})
+
+	err := tpl.ExecuteTemplate(&buf, v.Layout, vd)
 	if err != nil {
 		http.Error(w, "Something went wrong. If the problem " +
 			"persists, please email support@usegolang.com",
@@ -79,7 +91,11 @@ func NewView(layout string, files ...string) *View {
 	addTemplatePath(files)
 	addTemplateExt(files)
 	files = append(files, layoutFiles()...)
-	t, err := template.ParseFiles(files...)
+	t, err := template.New("").Funcs(template.FuncMap{
+		"csrfField": func() (template.HTML, error) {
+			return "", errors.New("csrfField is not implemented")
+		},
+	}).ParseFiles(files...)
 	if err != nil {
 		panic(err)
 	}

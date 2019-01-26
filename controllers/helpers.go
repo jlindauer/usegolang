@@ -14,6 +14,8 @@ func parseForm(r *http.Request, dst interface{}) error {
   }
 
   dec := schema.NewDecoder()
+  // Call IgnoreUnknownKeys to ignore CSRF token key
+  dec.IgnoreUnknownKeys(true)
   if err := dec.Decode(dst, r.PostForm); err != nil {
     return err
   }

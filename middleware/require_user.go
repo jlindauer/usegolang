@@ -2,6 +2,7 @@ package middleware
 
 import (
   "net/http"
+  "strings"
 
   "github.com/jlindauer/usegolang/models"
   "github.com/jlindauer/usegolang/context"
@@ -21,6 +22,14 @@ func (mw *User) Apply(next http.Handler) http.HandlerFunc {
 
 func (mw *User) ApplyFn(next http.HandlerFunc) http.HandlerFunc {
   return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    path := r.URL.Path
+    // If the user is requesting a static asset or image we will
+    // not need to lookup the current user so we skip doing that.
+    if strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/images/") {
+      next(w, r)
+      return
+    }
+
     cookie, err := r.Cookie("remember_token")
     if err != nil {
       next(w, r)

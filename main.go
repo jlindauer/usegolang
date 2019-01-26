@@ -12,21 +12,10 @@ import (
 	"github.com/jlindauer/usegolang/rand"
 )
 
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "postgres"
-	password = ""
-	dbname   = "usegolang_dev"
-)
-
 func main() {
-	// Create a DB connection string and then use it to
-	// create our model services.
-	psqlInfo := fmt.Sprintf("dbname=%s user=%s password=%s host=%s port=%d sslmode=disable",
-		dbname, user, password, host, port)
-
-	services, err := models.NewServices(psqlInfo)
+	cfg := DefaultConfig()
+	dbCfg := DefaultPostgresConfig()
+	services, err := models.NewServices(dbCfg.Dialect(), dbCfg.ConnectionInfo())
 	if err != nil {
 		panic(err)
 	}
@@ -46,12 +35,11 @@ func main() {
 	}
 
 	// Create the CSRF Protect middleware
-	isProd := false
 	b, err := rand.Bytes(32)
 	if err != nil {
 		panic(err)
 	}
-	csrfMw := csrf.Protect(b, csrf.Secure(isProd))
+	csrfMw := csrf.Protect(b, csrf.Secure(cfg.IsProd()))
 
 	requireUserMw := middleware.RequireUser{}
 
@@ -87,6 +75,6 @@ func main() {
 	assetHandler = http.StripPrefix("/assets/", assetHandler)
 	r.PathPrefix("/assets/").Handler(assetHandler)
 
-	fmt.Println("Starting the server on :3000...")
-	http.ListenAndServe(":3000", csrfMw(userMw.Apply(r)))
+	fmt.Printf("Starting the server on %d...\n", cfg.Port)
+	http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), csrfMw(userMw.Apply(r)))
 }

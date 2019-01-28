@@ -45,13 +45,6 @@ func main() {
 		UserService: services.User,
 	}
 
-	// Create the CSRF Protect middleware
-	b, err := rand.Bytes(32)
-	if err != nil {
-		panic(err)
-	}
-	csrfMw := csrf.Protect(b, csrf.Secure(cfg.IsProd()))
-
 	requireUserMw := middleware.RequireUser{}
 
 	// static pages
@@ -85,6 +78,13 @@ func main() {
 	assetHandler := http.FileServer(http.Dir("./assets/"))
 	assetHandler = http.StripPrefix("/assets/", assetHandler)
 	r.PathPrefix("/assets/").Handler(assetHandler)
+
+	// Create the CSRF Protect middleware
+	b, err := rand.Bytes(32)
+	if err != nil {
+		panic(err)
+	}
+	csrfMw := csrf.Protect(b, csrf.Secure(cfg.IsProd()))
 
 	fmt.Printf("Starting the server on %d...\n", cfg.Port)
 	http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), csrfMw(userMw.Apply(r)))

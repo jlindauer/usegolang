@@ -3,10 +3,12 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/jlindauer/usegolang/models"
 	"github.com/jlindauer/usegolang/rand"
 	"github.com/jlindauer/usegolang/views"
+	"github.com/jlindauer/usegolang/context"
 	//"github.com/gorilla/schema"
 )
 
@@ -129,6 +131,27 @@ func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
 	http.SetCookie(w, &cookie)
 
 	return nil
+}
+
+// Logout is used to delete a user's session cookie and invalidate
+// their current remember token, which will sign the current user out.
+// POST /logout
+func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
+	// First expire the user's cookie
+	cookie := http.Cookie{
+		Name:			"remember_token",
+		Value:		"",
+		Expires:	time.Now(),
+		HttpOnly: true,
+	}
+	http.SetCookie(w, &cookie)
+	// Now update the user with a new remember token
+	user := context.User(r.Context())
+	token, _ := rand.RememberToken()
+	user.Remember = token
+	u.us.Update(user)
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 // CookieTest checks if the current user has a cookie set
